@@ -84,13 +84,14 @@ class Agent6:
                 goal = self.get_potential_target(start)
                 path = astar_search(self._knowledge.get_cell(start[0], start[1]),
                                 goal, self._knowledge)
+                
+                # Not sure if we are allow to do this
                 if path != None:
                     break
                 self.update_belief_state(self.get_scalar(self._belief_state[goal[0]][goal[1]], 
                                                          Status.Blocked))
                 self._belief_state[goal[0], goal[1]] = 0
                 self._knowledge.get_cell(goal[0], goal[1]).set_status(Status.Blocked)
-                print('Try')
 
             end_cell, count, status_string = self.execute(path, goal)
 
