@@ -1,7 +1,7 @@
 from math import dist
 import numpy as np
 from numpy.core.fromnumeric import amin
-from random import randrange
+from random import randrange, uniform
 import time
 from queue import PriorityQueue
 from dataclasses import dataclass, field
@@ -99,7 +99,8 @@ class Agent6:
             raise ValueError('Status for calling get_scalar should be either blocked or examine')
         
     def examine(self, cell: Cell, terrain_type: TerrainType) -> bool:
-        return bool(self._maze.get_cell(cell.x, cell.y).is_target() * self._fnr[terrain_type.value])
+        return uniform(0, 1) > self._fnr[terrain_type.value] if self._maze.get_cell(cell.x, cell.y).is_target() else False
+        #return bool(self._maze.get_cell(cell.x, cell.y).is_target() * self._fnr[terrain_type.value])
 
     def execute(self, path: list[Cell]) -> list:
         for count, cell in enumerate(path):
