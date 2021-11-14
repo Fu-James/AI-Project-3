@@ -22,8 +22,7 @@ class Agent6:
         self._dim = maze.get_dim()
 
         self._knowledge = GridWorld(self._dim, False)
-        self._belief_state = np.array([[(1 / (self._dim ** 2)) for _ in range(self._dim)] 
-                              for _ in range(self._dim)])
+        self._belief_state = np.ones((self._dim, self._dim))
     
     def update_belief_state(self, cell: Cell, status: Status) -> None:
         if status == Status.Blocked:
@@ -32,7 +31,7 @@ class Agent6:
             pass
         elif status == Status.Examine:
             fnr = self._fnr[cell.get_terrain_type().value]
-            self._belief_state[cell.x, cell.y] *= (1 - fnr)
+            self._belief_state[cell.x, cell.y] *= fnr
         else:
             raise ValueError('Status for calling get_scalar should be either blocked, empty, or examine')
 
@@ -88,27 +87,23 @@ class Agent6:
         
     def examine(self, cell: Cell) -> bool:
         terrain_type = cell.get_terrain_type()
-        return uniform(0, 1) > self._fnr[terrain_type.value] if self._maze.get_cell(cell.x, cell.y).is_target() else False
+        return uniform(0, 1) > self._fnr[terrain_type.value] if cell.is_target() else False
 
     def execute(self, path: list[Cell]) -> list:
-        cell_in_knowledge = None
-        for count, cell in enumerate(path):
-            cell_in_maze = self._maze.get_cell(cell.x, cell.y)
-            cell_in_knowledge = self._knowledge.get_cell(cell.x, cell.y)
+        for count, cell_in_knowledge in enumerate(path):
+            cell_in_maze = self._maze.get_cell(cell_in_knowledge.x, cell_in_knowledge.y)
             if not cell_in_knowledge.isVisited:
                 cell_in_knowledge.isVisited = True
                 if cell_in_maze.is_blocked():
                     cell_in_knowledge.set_status(Status.Blocked)
                     self.update_belief_state(cell_in_knowledge, Status.Blocked)
-                    return cell.get_parent(), count - 1, 'blocked'
+                    return cell_in_knowledge.get_parent(), count - 1, 'blocked'
                 else:
                     cell_in_knowledge.set_status(Status.Empty)
                     cell_in_knowledge.set_terrain_type(cell_in_maze.get_terrain_type())
                     self.update_belief_state(cell_in_knowledge, Status.Empty)
 
-        if cell_in_knowledge is None:
-            raise Exception('Error!')
-        if self.examine(cell_in_knowledge):
+        if self.examine(cell_in_maze):
             return cell_in_knowledge, count, 'find goal'
         else:
             self.update_belief_state(cell_in_knowledge, Status.Examine)
@@ -122,8 +117,6 @@ class Agent6:
         astar_run_count = 0
 
         for _ in range(steps):
-            goal = []
-            path = []
             while True:
                 start_time = time.time_ns()
                 goal = self.get_target(start)
