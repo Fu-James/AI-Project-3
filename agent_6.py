@@ -1,18 +1,17 @@
-from math import dist
-import numpy as np
-from numpy.core.fromnumeric import amin
-from random import randrange
+import math
 import time
-from queue import PriorityQueue
-from dataclasses import dataclass, field
+import numpy as np
+from random import uniform, choice
+from queue import Queue
+from dataclasses import dataclass
 
-from gridworld import GridWorld, Cell, Status, TerrainType
+from gridworld import GridWorld, Cell, Status
 from astar_search import astar_search
 
-@dataclass(order=True)
+@dataclass
 class Node():
+    pos: tuple
     distance: int
-    pos: tuple = field(compare=False)
 
 class Agent6:
     def __init__(self, maze: GridWorld, density: float,
@@ -45,58 +44,39 @@ class Agent6:
             neighbors.append((pos[0], pos[1] - 1))   
         return neighbors
 
-    def get_target(self, start: list) -> list:
-        maximum = np.amax(self._belief_state)
-        max_list = []    
-        start = tuple(start)
+    def breadth_first_search(self, start: tuple, target_value: np.float64) -> list:
         visited = set(start)
-        queue = PriorityQueue()
-        queue.put(Node(0, start))
+        queue: Queue[Node] = Queue()
+        queue.put(Node(start, 0))
+        targets = []
 
         while not queue.empty():
             node = queue.get()
-            pos = node.pos
-            distance = node.distance
-
-            if self._belief_state[pos] == maximum:
-                max_list.append(pos)
-                while not queue.empty():
-                    node = queue.get()
-                    if node.distance != distance:
-                        break
-                    if self._belief_state[node.pos] == maximum:
-                        max_list.append(node.pos)
-                break
             
-            neighbors = self.get_neighbors(pos)
+            if math.isclose(self._belief_state[node.pos], target_value):
+                target_distance = node.distance
+                targets.append(node.pos)
+                while not queue.empty:
+                    node = queue.get()
+                    if node.distance > target_distance:
+                        return targets
+                    if math.isclose(self._belief_state[node.pos], target_value):
+                        targets.append(node.pos)
+                break
+            neighbors = self.get_neighbors(node.pos)
             for neighbor in neighbors:
                 if neighbor not in visited:
-                    queue.put(Node(distance + 1, neighbor))
                     visited.add(neighbor)
+                    queue.put(Node(neighbor, node.distance + 1))
+        return targets
 
-        return list(max_list[randrange(len(max_list))])
-
-    def get_potential_target(self, start: list) -> list:
-        targets_pos = np.argwhere(self._belief_state == np.amax(self._belief_state))
-        if len(targets_pos) == 1:
-            return list(targets_pos[0])
-        
-        targets_distance = [np.sum(np.abs(target_pos - start)) 
-                            for target_pos in targets_pos]
-        min_distance_pos = np.nonzero(targets_distance == np.amin(targets_distance))
-        targets_pos = targets_pos[min_distance_pos]
-        if len(targets_pos) == 1:
-            return list(targets_pos[0])
-
-        return list(targets_pos[randrange(len(targets_pos))])
-
-    def get_scalar(self, belief: float, status: Status, terrain_type: TerrainType = None):
-        if status == Status.Blocked:
-            return 1 / (1 - belief)
-        elif status == Status.Examine:
-            return (1 - self._fnr[terrain_type.value] * belief) / (1 - belief)
-        else:
-            raise ValueError('Status for calling get_scalar should be either blocked or examine')
+    
+    def get_target(self, start: list) -> list:
+        target_value = np.amax(self._belief_state)
+        targets = self.breadth_first_search(tuple(start), target_value)
+        if len(targets) < 1:
+            raise Exception('Logical error in breadth_first_search()')
+        return list(choice(targets))
         
     def examine(self, cell: Cell, terrain_type: TerrainType) -> bool:
         return bool(self._maze.get_cell(cell.x, cell.y).is_target() * self._fnr[terrain_type.value])
