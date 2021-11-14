@@ -14,9 +14,11 @@ class TerrainType(Enum):
     Flat = 0
     Hilly = 1
     Forest = 2
+    Unknown = 3
+    Blocked = 4
 
 class Cell():
-    def __init__(self, parent, x: int, y: int, 
+    def __init__(self, parent, x: int, y: int, dim: int,
                  status: Status = Status.Unconfirmed) -> None:
         self.x = x
         self.y = y
@@ -27,6 +29,7 @@ class Cell():
         self._status = status
         self._terrain_type = None
         self.isVisited = False
+        self._index: int = x * dim + y
 
     def set_g(self, g: float) -> None:
         self._g = g
@@ -40,7 +43,7 @@ class Cell():
     def update_f_g_h(self, g: int, goal: list) -> None:
         self.set_g(g)
         self.set_h(goal)
-        self.fscore = self._g + self._h
+        self._f = self._g + self._h
     
     def get_f(self) -> float:
         return self._f
@@ -66,8 +69,8 @@ class Cell():
     def get_terrain_type(self) -> TerrainType:
         return self._terrain_type
 
-    def get_index(self, dim) -> int:
-        return self.x * dim + self.y
+    def get_index(self) -> int:
+        return self._index
 
     def is_blocked(self) -> bool:
         return self._status is Status.Blocked
@@ -105,12 +108,13 @@ class GridWorld():
             self.create_knowledge()
 
     def create_maze(self, density):
-        maze = [[Cell(None, x, y, Status.Empty) 
+        maze = [[Cell(None, x, y, self._dim, Status.Empty) 
                  for y in range(self._dim)] for x in range(self._dim)]
         for row in range(self._dim):
             for col in range(self._dim):
                 if random.uniform(0, 1) < density:
                     maze[row][col].set_status(Status.Blocked)
+                    maze[row][col].set_terrain_type(TerrainType.Blocked)
                 else:
                     maze[row][col].set_random_terrain_type()
 
@@ -127,8 +131,11 @@ class GridWorld():
         self.gridworld = maze
 
     def create_knowledge(self):
-        knowledge = [[Cell(None, x, y) for y in range(self._dim)]
+        knowledge = [[Cell(None, x, y, self._dim) for y in range(self._dim)]
                      for x in range(self._dim)]
+        for row in knowledge:
+            for cell in row:
+                cell.set_terrain_type(TerrainType.Unknown)
         self.gridworld = knowledge
     
     def get_dim(self) -> int:
