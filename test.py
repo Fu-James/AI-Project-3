@@ -27,7 +27,7 @@ def solve_maze(agent: Type[Agent6]) -> list:
     return examine_count, len(path), solve_time
 
 def main() -> None:
-    runs = 1
+    runs = 300
     density = 0.3
     false_negative_rate = [0.2, 0.5, 0.8]
     
