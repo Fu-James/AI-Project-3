@@ -1,18 +1,17 @@
-from math import dist
-import numpy as np
-from numpy.core.fromnumeric import amin
-from random import randrange, uniform
+import math
 import time
-from queue import PriorityQueue
-from dataclasses import dataclass, field
+import numpy as np
+from random import uniform, choice
+from queue import Queue
+from dataclasses import dataclass
 
-from gridworld import GridWorld, Cell, Status, TerrainType
+from gridworld import GridWorld, Cell, Status
 from astar_search import astar_search
 
-@dataclass(order=True)
+@dataclass
 class Node():
+    pos: tuple
     distance: int
-    pos: tuple = field(compare=False)
 
 class Agent6:
     def __init__(self, maze: GridWorld, density: float,
@@ -23,11 +22,18 @@ class Agent6:
         self._dim = maze.get_dim()
 
         self._knowledge = GridWorld(self._dim, False)
-        self._belief_state = np.array([[(1 / (self._dim ** 2)) for _ in range(self._dim)] 
-                              for _ in range(self._dim)])
+        self._belief_state = np.ones((self._dim, self._dim))
     
-    def update_belief_state(self, scalar: float) -> None:
-        self._belief_state *= scalar
+    def update_belief_state(self, cell: Cell, status: Status) -> None:
+        if status == Status.Blocked:
+            self._belief_state[cell.x, cell.y] = 0
+        elif status == Status.Empty:
+            pass
+        elif status == Status.Examine:
+            fnr = self._fnr[cell.get_terrain_type().value]
+            self._belief_state[cell.x, cell.y] *= fnr
+        else:
+            raise ValueError('Status for calling get_scalar should be either blocked, empty, or examine')
 
     def get_neighbors(self, pos: tuple) -> list[tuple]:
         neighbors = []
@@ -45,108 +51,91 @@ class Agent6:
             neighbors.append((pos[0], pos[1] - 1))   
         return neighbors
 
-    def get_target(self, start: list) -> list:
-        maximum = np.amax(self._belief_state)
-        max_list = []    
-        start = tuple(start)
+    def breadth_first_search(self, start: tuple, target_value: np.float64) -> list:
         visited = set(start)
-        queue = PriorityQueue()
-        queue.put(Node(0, start))
+        queue: Queue[Node] = Queue()
+        queue.put(Node(start, 0))
+        targets = []
 
         while not queue.empty():
             node = queue.get()
-            pos = node.pos
-            distance = node.distance
-
-            if self._belief_state[pos] == maximum:
-                max_list.append(pos)
-                while not queue.empty():
-                    node = queue.get()
-                    if node.distance != distance:
-                        break
-                    if self._belief_state[node.pos] == maximum:
-                        max_list.append(node.pos)
-                break
             
-            neighbors = self.get_neighbors(pos)
+            if math.isclose(self._belief_state[node.pos], target_value):
+                target_distance = node.distance
+                targets.append(node.pos)
+                while not queue.empty:
+                    node = queue.get()
+                    if node.distance > target_distance:
+                        return targets
+                    if math.isclose(self._belief_state[node.pos], target_value):
+                        targets.append(node.pos)
+                break
+            neighbors = self.get_neighbors(node.pos)
             for neighbor in neighbors:
                 if neighbor not in visited:
-                    queue.put(Node(distance + 1, neighbor))
                     visited.add(neighbor)
+                    queue.put(Node(neighbor, node.distance + 1))
+        return targets
 
-        return list(max_list[randrange(len(max_list))])
-
-    def get_potential_target(self, start: list) -> list:
-        targets_pos = np.argwhere(self._belief_state == np.amax(self._belief_state))
-        if len(targets_pos) == 1:
-            return list(targets_pos[0])
+    
+    def get_target(self, start: list) -> list:
+        target_value = np.amax(self._belief_state)
+        targets = self.breadth_first_search(tuple(start), target_value)
+        if len(targets) < 1:
+            raise Exception('Logical error in breadth_first_search()')
+        return list(choice(targets))
         
-        targets_distance = [np.sum(np.abs(target_pos - start)) 
-                            for target_pos in targets_pos]
-        min_distance_pos = np.nonzero(targets_distance == np.amin(targets_distance))
-        targets_pos = targets_pos[min_distance_pos]
-        if len(targets_pos) == 1:
-            return list(targets_pos[0])
-
-        return list(targets_pos[randrange(len(targets_pos))])
-
-    def get_scalar(self, belief: float, status: Status, terrain_type: TerrainType = None):
-        if status == Status.Blocked:
-            return 1 / (1 - belief)
-        elif status == Status.Examine:
-            return (1 - self._fnr[terrain_type.value] * belief) / (1 - belief)
-        else:
-            raise ValueError('Status for calling get_scalar should be either blocked or examine')
-        
-    def examine(self, cell: Cell, terrain_type: TerrainType) -> bool:
-        return uniform(0, 1) > self._fnr[terrain_type.value] if self._maze.get_cell(cell.x, cell.y).is_target() else False
-        #return bool(self._maze.get_cell(cell.x, cell.y).is_target() * self._fnr[terrain_type.value])
+    def examine(self, cell: Cell) -> bool:
+        terrain_type = cell.get_terrain_type()
+        return uniform(0, 1) > self._fnr[terrain_type.value] if cell.is_target() else False
 
     def execute(self, path: list[Cell]) -> list:
-        for count, cell in enumerate(path):
-            cell_in_maze = self._maze.get_cell(cell.x, cell.y)
-            cell_in_knowledge = self._knowledge.get_cell(cell.x, cell.y)
+        for count, cell_in_knowledge in enumerate(path):
+            cell_in_maze = self._maze.get_cell(cell_in_knowledge.x, cell_in_knowledge.y)
             if not cell_in_knowledge.isVisited:
                 cell_in_knowledge.isVisited = True
                 if cell_in_maze.is_blocked():
                     cell_in_knowledge.set_status(Status.Blocked)
-                    self.update_belief_state(self.get_scalar(self._belief_state[cell.x][cell.y], 
-                                                            Status.Blocked))
-                    self._belief_state[cell.x, cell.y] = 0
-                    return cell.get_parent(), count - 1, 'blocked'
+                    self.update_belief_state(cell_in_knowledge, Status.Blocked)
+                    return cell_in_knowledge.get_parent(), count - 1, 'blocked'
                 else:
                     cell_in_knowledge.set_status(Status.Empty)
+                    cell_in_knowledge.set_terrain_type(cell_in_maze.get_terrain_type())
+                    self.update_belief_state(cell_in_knowledge, Status.Empty)
 
-        cell = path[-1]
-        terrain_type = self._maze.get_cell(cell.x, cell.y).get_terrain_type()
-        if self.examine(cell, terrain_type):
-            return cell, count, 'find goal'
+        if self.examine(cell_in_maze):
+            return cell_in_knowledge, count, 'find goal'
         else:
-            belief = self._belief_state[cell.x][cell.y]
-            self.update_belief_state(self.get_scalar(belief, Status.Examine, terrain_type))
-            self._belief_state[cell.x, cell.y] = belief * self._fnr[terrain_type.value]
-            return cell, count, 'examine failed'
+            self.update_belief_state(cell_in_knowledge, Status.Examine)
+            return cell_in_knowledge, count, 'examine failed'
 
     def solve(self, start: list, steps: int) -> list:
         examine_count = 0
         total_path = []
         time_to_find_goal = 0
+        time_to_run_astar = 0
+        astar_run_count = 0
+
         for _ in range(steps):
-            goal = []
-            path = []
             while True:
                 start_time = time.time_ns()
                 goal = self.get_target(start)
                 end_time = time.time_ns()
                 time_to_find_goal += end_time - start_time
-                path = astar_search(self._knowledge.get_cell(start[0], start[1]), goal, self._knowledge)
+
+                start_time = time.time_ns()
+                path = astar_search(start, goal, self._knowledge)
+                end_time = time.time_ns()
+                time_to_run_astar += end_time - start_time
+                astar_run_count += 1
+
                 if path != None:
                     break
-                # Not sure if we are allow to do this
-                self.update_belief_state(self.get_scalar(self._belief_state[goal[0]][goal[1]], 
-                                                         Status.Blocked))
-                self._belief_state[goal[0], goal[1]] = 0
-                self._knowledge.get_cell(goal[0], goal[1]).set_status(Status.Blocked)
+
+                # If the cell is unreachable, we can assume the cell is blocked
+                cell_in_knowledge = self._knowledge.get_cell(goal[0], goal[1])
+                cell_in_knowledge.set_status(Status.Blocked)
+                self.update_belief_state(cell_in_knowledge, Status.Blocked)
 
             end_cell, count, status_string = self.execute(path)
 
@@ -156,7 +145,9 @@ class Agent6:
                 examine_count += 1
 
             if status_string == 'find goal':
-                print(f'time to find the goal = {time_to_find_goal}')
+                print(f'A* search run {astar_run_count} times')
+                print(f'time to run A* search: {time_to_run_astar}')
+                print(f'time to guess goals: {time_to_find_goal}')
                 return examine_count, total_path, status_string
         
         return examine_count, total_path, 'cannot find goal in limited steps'

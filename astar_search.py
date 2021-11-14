@@ -17,18 +17,19 @@ def backtrack(current: Cell) -> list[Cell]:
         current = current.get_parent()
     return list(path)
 
-def astar_search(start: Cell, goal: list, grid: GridWorld) -> list[Cell]:
-    fringe = PriorityQueue()
-    fringe.put(PrioritizedItem(0, copy(start)))
+def astar_search(start: list, goal: list, grid: GridWorld) -> list[Cell]:
+    start_cell = grid.get_cell(start[0], start[1])
+    start_cell.set_parent(None)
+
+    fringe: PriorityQueue[PrioritizedItem] = PriorityQueue()
+    fringe.put(PrioritizedItem(0, start_cell))
 
     visited = set()
+    visited.add(start_cell.get_index())
 
     while not fringe.empty():
         current = fringe.get().item
-        if (current.x, current.y) in visited:
-            continue
-        visited.add((current.x, current.y))
-
+        
         if [current.x, current.y] == goal:
             return backtrack(current)
 
@@ -36,13 +37,13 @@ def astar_search(start: Cell, goal: list, grid: GridWorld) -> list[Cell]:
         neighbors = grid.get_neighbors(current)
 
         for neighbor in neighbors:
+            neighbor_index = neighbor.get_index()
             if (not neighbor.is_blocked() and 
-                (neighbor.x, neighbor.y) not in visited):
+                neighbor_index not in visited):
+                visited.add(neighbor_index)
 
-                neighbor_copy = copy(neighbor)
-                neighbor_copy.update_f_g_h(current_g, goal)
-                neighbor_copy.set_parent(current)
-                fringe.put(PrioritizedItem(neighbor_copy.get_f(), 
-                                           neighbor_copy))
+                neighbor.update_f_g_h(current_g + 1, goal)
+                neighbor.set_parent(current)
+                fringe.put(PrioritizedItem(neighbor.get_f(), neighbor))
 
     return None
