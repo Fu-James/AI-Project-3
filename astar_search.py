@@ -17,7 +17,7 @@ def backtrack(current: Cell) -> list[Cell]:
         current = current.get_parent()
     return list(path)
 
-def astar_search(start: list, goal: list, grid: GridWorld) -> list[Cell]:
+def astar_search(start: list, goal: list, grid: GridWorld, full_movement: bool=False) -> list[Cell]:
     start_cell = grid.get_cell(start[0], start[1])
     start_cell.set_parent(None)
 
@@ -34,7 +34,10 @@ def astar_search(start: list, goal: list, grid: GridWorld) -> list[Cell]:
             return backtrack(current)
 
         current_g = current.get_g()
-        neighbors = grid.get_neighbors(current)
+        if full_movement:
+            neighbors = grid.get_all_neighbors(current)
+        else:
+            neighbors = grid.get_neighbors(current)
 
         for neighbor in neighbors:
             neighbor_index = neighbor.get_index()

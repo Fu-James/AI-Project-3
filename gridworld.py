@@ -144,6 +144,9 @@ class GridWorld():
     def get_target(self) -> list:
         return self._target
     
+    def set_target(self, target: list):
+        self._target = target    
+    
     def get_cell(self, x: int, y: int) -> Cell:
         if not 0 <= x < self._dim:
             raise ValueError('Index x should be in the interval [0, dim)')
@@ -166,6 +169,23 @@ class GridWorld():
         if current.y - 1 >= 0:
             neighbors.append(self.gridworld[current.x][current.y-1])   
         return neighbors
+    
+    def get_all_neighbors(self, current: Cell) -> list[Cell]:
+        # N, S, E, W
+        neighbors = self.get_neighbors(current)
+        # NW
+        if current.x - 1 >= 0 and current.y-1 >= 0:
+            neighbors.append(self.gridworld[current.x-1][current.y-1])
+        # NE
+        if current.x - 1 >= 0 and current.y+1 < self._dim:
+            neighbors.append(self.gridworld[current.x-1][current.y+1])
+        # SW
+        if current.x + 1 < self._dim and current.y-1 >= 0:
+            neighbors.append(self.gridworld[current.x+1][current.y-1])
+        # SE
+        if current.x+1 < self._dim and current.y+1 < self._dim:
+            neighbors.append(self.gridworld[current.x+1][current.y+1])
+        return neighbors        
 
     def print_grid(self) -> str:
         maze = ''
