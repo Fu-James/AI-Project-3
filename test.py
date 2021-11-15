@@ -28,9 +28,9 @@ def solve_maze(agent: Type[Agent6], dim: int) -> list:
     return examine_count, len(path), solve_time
 
 def main() -> None:
-    runs = 1
+    runs = 100
     density = 0.3
-    dim = 25
+    dim = 100
     false_negative_rate = [0.2, 0.5, 0.8]
     
     total_time_agent_list_6 = [] 
@@ -53,8 +53,6 @@ def main() -> None:
             path = astar_search([0, 0], goal, maze)            
             
             if path != None:
-                for i in path:
-                    maze.get_cell(i.x, i.y).set_status(Status.Path)
                 maze.print_grid()
                 
                 terrain_type_of_goal = maze.get_cell(goal[0], goal[1]).get_terrain_type().name 
@@ -89,7 +87,7 @@ def main() -> None:
     print(f'Average solving time for agent7: {np.mean(total_time_agent_list_7)}')
     print(f'Average solving time for agent9: {np.mean(total_time_agent_list_9)}')
 
-    with open(f'agent_{dim}_x_{dim}_6_7_9.csv', 'w', encoding='UTF8') as f:
+    with open(f'agent_{dim}_x_{dim}_for_{runs}_6_7_9.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(terrain_type)
         writer.writerow(examine_count_list_6)
