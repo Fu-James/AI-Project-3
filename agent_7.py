@@ -43,7 +43,8 @@ class Agent7(Agent6):
                     cell_in_knowledge.set_status(Status.Empty)
                     cell_in_knowledge.set_terrain_type(cell_in_maze.get_terrain_type())
                     
-                    if self.update_confidence(cell_in_knowledge):
+                    confidence_increase = self.update_confidence(cell_in_knowledge)
+                    if confidence_increase:
                         if self.belief_is_greater(cell_in_knowledge, path[-1]):
                             break
                     else:
