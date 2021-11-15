@@ -140,7 +140,7 @@ class Agent6:
             end_cell, count, status_string = self.execute(path)
 
             start = [end_cell.x, end_cell.y]
-            total_path.extend(path[:count])
+            total_path.extend(path[1:count + 1])
             if status_string == 'find goal' or status_string == 'examine failed':
                 examine_count += 1
 
