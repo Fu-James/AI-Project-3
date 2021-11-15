@@ -23,7 +23,7 @@ class Agent7(Agent6):
         """
         confidence = self._confidence[cell.get_terrain_type().value]
         self._belief_state[cell.x, cell.y] *= confidence
-        return True if confidence >= 0 else False
+        return True if confidence >= 1 else False
 
     def belief_is_greater(self, a: Cell, b: Cell) -> bool:
         if self._belief_state[a.x][a.y] >= self._belief_state[b.x][b.y]:
