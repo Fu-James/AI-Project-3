@@ -78,18 +78,6 @@ class Agent9(Agent7):
         if len(targets) < 1:
             raise Exception('Logical error in breadth_first_search()')
         return list(choice(targets))
-    # def update_confidence(self, cell: Cell) -> bool:
-    #     """
-    #     Return true if confidence of the cell increase, otherwise false
-    #     """
-    #     confidence = self._confidence[cell.get_terrain_type().value]
-    #     self._belief_state[cell.x, cell.y] *= confidence
-    #     return True if confidence >= 0 else False
-
-    # def belief_is_greater(self, a: Cell, b: Cell) -> bool:
-    #     if self._belief_state[a.x][a.y] >= self._belief_state[b.x][b.y]:
-    #         return True
-    #     return False    
     
     def partial_sensing(self, current: Cell) -> None:
         neighbors = self._maze.get_all_neighbors(current)
@@ -119,7 +107,6 @@ class Agent9(Agent7):
                     if self._debug:
                         print(f'Blocked encountered at ({cell_in_knowledge.x}, {cell_in_knowledge.y})')
                         print(f'Test cell: ({test.x}, {test.y}) isVisisted: {test.isVisited} parent: {test.get_parent()}')
-                        # print(f'path -1: {path[-1].x}, {path[-1].y}  parent: {path[-1].get_parent().x} {path[-1].get_parent().y}')
                     cell_in_knowledge.set_status(Status.Blocked)
                     self.update_belief_state(cell_in_knowledge, self._belief_state, Status.Blocked)
                     if cell_in_knowledge.get_parent() is None:
@@ -140,17 +127,7 @@ class Agent9(Agent7):
         if self.partial_sensing(cell_in_maze):
             neighbors = self._knowledge.get_all_neighbors(cell_in_knowledge)
             
-            copy_belief_state = copy.deepcopy(self._belief_state)            
-            x, y = self._maze.get_target()
-            # if self._debug:
-            #     print(f'Sense Start')
-            #     bs1 = ''
-            #     for row in copy_belief_state:
-            #         bs1 += ' '.join(['{:.4}\t\t'.format(belief)
-            #                             for belief in row]) + "\n"
-            #     print(bs1)
-            #     print(f'Target At ({x}, {y})')
-            #     print(f'Agent At ({cell_in_knowledge.x}, {cell_in_knowledge.y}) and sensed so not at target')
+            copy_belief_state = copy.deepcopy(self._belief_state)     
             
             self.update_belief_state(cell_in_knowledge, copy_belief_state, Status.Blocked)
             
@@ -159,23 +136,9 @@ class Agent9(Agent7):
                     if i > cell_in_knowledge.x - 2 and i < cell_in_knowledge.x + 2 and j > cell_in_knowledge.y - 2 and j < cell_in_knowledge.y + 2:
                         pass
                     else:
-                        # if self._debug:
-                        #     print(f'Reducing Cell ({i}, {j})\tBelief was: {self._belief_state[i, j]}')
                         temp_cell = self._knowledge.get_cell(i, j)
                         self.update_belief_state(temp_cell, copy_belief_state, Status.Blocked)                                              
                         
-            # if self._debug:
-            #     print("Copy Belief State:")           
-            #     bs2 = ''
-            #     for row in copy_belief_state:
-            #         bs2 += ' '.join(['{:.4}\t'.format(belief)
-            #                             for belief in row]) + "\n"
-            #     print(bs2)
-                
-            #     print("Belief State:")
-            #     self.print_belief_state()
-            #     print(f'Update belief --> Should be in {[[i.x, i.y] for i in neighbors if not i.is_blocked()]}')
-            
             potential_target = self.get_target([cell_in_knowledge.x, cell_in_knowledge.y], copy_belief_state)
             
             if self._debug:
@@ -185,11 +148,6 @@ class Agent9(Agent7):
             
             if not potential_target.isVisited:
                 potential_target.set_parent(cell_in_knowledge)
-                # potential_target.set_parent(cell_in_knowledge)        
-            #print(f'Current: ({cell_in_knowledge.x}, {cell_in_knowledge.y})')
-            
-            #print(f'potential_target Parent is: ({potential_target.get_parent().x}, {potential_target.get_parent().y}) isVisited: {potential_target.isVisited} Status: {potential_target.get_status()}')
-            
             return potential_target, count, 'move in potential target direction'
         else:           
             no_of_checks = 1
@@ -221,7 +179,6 @@ class Agent9(Agent7):
         time_to_find_goal = 0
         time_to_run_astar = 0
         astar_run_count = 0
-        # goal = self.get_target(start, self._belief_state)
         for _ in range(steps):
             while True:
                 start_time = time.time_ns()
@@ -252,7 +209,7 @@ class Agent9(Agent7):
 
             end_cell, count, status_string = self.execute(path)
             start = [end_cell.x, end_cell.y]
-            total_path.extend(path[:count])
+            total_path.extend(path[1:count + 1])
             if status_string == 'find goal' or status_string == 'examine failed':
                 self.examine_count += 1
 

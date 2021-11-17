@@ -27,10 +27,7 @@ def solve_maze(agent: Type[Agent6], dim: int) -> list:
     
     return examine_count, len(path), solve_time
 
-def main() -> None:
-    runs = 100
-    density = 0.3
-    dim = 100
+def main(runs, density, dim) -> None:
     false_negative_rate = [0.2, 0.5, 0.8]
     
     total_time_agent_list_6 = [] 
@@ -98,4 +95,6 @@ def main() -> None:
         writer.writerow(trajectory_length_list_9)
 
 if __name__ == '__main__':
-    main()
+    main(100, 0.3, 100)
+    main(100, 0.3, 80)
+    main(100, 0.3, 50)
